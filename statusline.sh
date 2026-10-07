@@ -1,7 +1,7 @@
 #!/bin/bash
 # Claude Code status line — managed by chezmoi (rinman24/dotfiles).
 # Reads session JSON on stdin (https://code.claude.com/docs/en/statusline) and prints:
-#   🤖 model · effort │ 🧠 [bar] used/size │ 💸 $cost
+#   🤖 model · effort │ 🪣 [bar] used/size │ 💸 $cost
 #   📂 folder │ 🌿 branch │ 🌳 worktree
 # Two short lines so it fits a vertically split Ghostty pane.
 # Segments with no data (effort, folder, branch, worktree) are dropped.
@@ -39,7 +39,7 @@ rgb red f38ba8;   rgb overlay0 6c7086
 track=$'\033[48;2;49;50;68m'  # surface0 background for the bar's empty track
 
 # Context thresholds in absolute tokens, independent of window size.
-# The bar spans 0..CTX_BAR_MAX; at or past it the bar is full and 🚨 replaces 🧠.
+# The bar spans 0..CTX_BAR_MAX; at or past it the bar is full and 🚨 replaces 🪣.
 CTX_WARN=95000 CTX_CRIT=120000 CTX_BAR_MAX=200000 BAR_CELLS=10
 
 if   [ "$tokens" -ge "$CTX_CRIT" ]; then ctx_color=$red
@@ -59,7 +59,7 @@ for (( i = 0; i < BAR_CELLS; i++ )); do
   else                      bar+=" "
   fi
 done
-ctx_icon="🧠"
+ctx_icon="🪣"
 [ "$tokens" -ge "$CTX_BAR_MAX" ] && ctx_icon="🚨"
 printf -v cost_fmt '$%.2f' "$cost"
 
