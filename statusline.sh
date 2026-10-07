@@ -7,7 +7,7 @@
 input=$(cat)
 
 # One jq pass; fields joined by \x1f so empty values survive `read`.
-IFS=$'\x1f' read -r model effort dir worktree ctx pct cost < <(
+IFS=$'\x1f' read -r model effort dir worktree ctx tokens cost < <(
   printf '%s' "$input" | jq -r '
     def human: if . >= 1000000 then "\((. / 100000 | round) / 10)M"
                elif . >= 1000 then "\(. / 1000 | round)k"
@@ -17,7 +17,7 @@ IFS=$'\x1f' read -r model effort dir worktree ctx pct cost < <(
       .workspace.current_dir // .cwd // "",
       .workspace.git_worktree // .worktree.name // "",
       "\(.context_window.total_input_tokens // 0 | human)/\(.context_window.context_window_size // 200000 | human)",
-      (.context_window.used_percentage // 0 | floor),
+      .context_window.total_input_tokens // 0,
       .cost.total_cost_usd // 0
     ] | map(tostring) | join("\u001f")'
 )
@@ -31,9 +31,10 @@ fi
 reset=$'\033[0m' dim=$'\033[2m' cyan=$'\033[36m' magenta=$'\033[35m'
 green=$'\033[32m' yellow=$'\033[33m' red=$'\033[31m' blue=$'\033[34m'
 
-if   [ "$pct" -ge 80 ]; then ctx_color=$red
-elif [ "$pct" -ge 50 ]; then ctx_color=$yellow
-else                         ctx_color=$green
+# Absolute token thresholds, independent of window size.
+if   [ "$tokens" -ge 120000 ]; then ctx_color=$red
+elif [ "$tokens" -ge 95000 ];  then ctx_color=$yellow
+else                                ctx_color=$green
 fi
 
 sep=" ${dim}│${reset} "
