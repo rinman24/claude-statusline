@@ -1,7 +1,9 @@
 #!/bin/bash
 # Claude Code status line — managed by chezmoi (rinman24/dotfiles).
 # Reads session JSON on stdin (https://code.claude.com/docs/en/statusline) and prints:
-#   model · effort │ 📂 folder │ 🌿 branch │ 🌳 worktree │ used/size │ $cost
+#   🤖 model · effort │ 🧠 [bar] used/size │ 💸 $cost
+#   📂 folder │ 🌿 branch │ 🌳 worktree
+# Two short lines so it fits a vertically split Ghostty pane.
 # Segments with no data (effort, folder, branch, worktree) are dropped.
 
 input=$(cat)
@@ -34,20 +36,47 @@ reset=$'\033[0m'
 rgb mauve cba6f7; rgb lavender b4befe; rgb blue 89b4fa; rgb teal 94e2d5
 rgb pink f5c2e7;  rgb peach fab387;    rgb green a6e3a1; rgb yellow f9e2af
 rgb red f38ba8;   rgb overlay0 6c7086
+track=$'\033[48;2;49;50;68m'  # surface0 background for the bar's empty track
 
-# Absolute token thresholds, independent of window size.
-if   [ "$tokens" -ge 120000 ]; then ctx_color=$red
-elif [ "$tokens" -ge 95000 ];  then ctx_color=$yellow
-else                                ctx_color=$green
+# Context thresholds in absolute tokens, independent of window size.
+# The bar spans 0..CTX_BAR_MAX; at or past it the bar is full and ⚠️ appears.
+CTX_WARN=95000 CTX_CRIT=120000 CTX_BAR_MAX=200000 BAR_CELLS=10
+
+if   [ "$tokens" -ge "$CTX_CRIT" ]; then ctx_color=$red
+elif [ "$tokens" -ge "$CTX_WARN" ]; then ctx_color=$yellow
+else                                     ctx_color=$green
 fi
 
-sep=" ${overlay0}│${reset} "
-line="${mauve}${model}${reset}"
-[ -n "$effort" ]   && line+="${overlay0} · ${lavender}${effort}${reset}"
-[ -n "$dir" ]      && line+="${sep}📂 ${blue}${dir##*/}${reset}"
-[ -n "$branch" ]   && line+="${sep}🌿 ${teal}${branch}${reset}"
-[ -n "$worktree" ] && line+="${sep}🌳 ${pink}${worktree}${reset}"
-line+="${sep}${ctx_color}${ctx}${reset}"
-line+="${sep}${peach}$(printf '$%.2f' "$cost")${reset}"
+# Eighth-block resolution: CTX_BAR_MAX / (BAR_CELLS * 8) tokens per step.
+eighths=(' ' ▏ ▎ ▍ ▌ ▋ ▊ ▉)
+steps=$(( tokens * BAR_CELLS * 8 / CTX_BAR_MAX ))
+[ "$steps" -gt $(( BAR_CELLS * 8 )) ] && steps=$(( BAR_CELLS * 8 ))
+bar=""
+for (( i = 0; i < BAR_CELLS; i++ )); do
+  n=$(( steps - i * 8 ))
+  if   [ "$n" -ge 8 ]; then bar+="█"
+  elif [ "$n" -gt 0 ]; then bar+="${eighths[n]}"
+  else                      bar+=" "
+  fi
+done
+warn=""
+[ "$tokens" -ge "$CTX_BAR_MAX" ] && warn=" ⚠️"
+printf -v cost_fmt '$%.2f' "$cost"
 
-printf '%s\n' "$line"
+sep=" ${overlay0}│${reset} "
+
+# Line 1: session — model · effort │ context │ cost
+line1="🤖 ${mauve}${model}${reset}"
+[ -n "$effort" ] && line1+="${overlay0} · ${lavender}${effort}${reset}"
+line1+="${sep}🧠 ${track}${ctx_color}${bar}${reset} ${ctx_color}${ctx}${reset}${warn}"
+line1+="${sep}💸 ${peach}${cost_fmt}${reset}"
+
+# Line 2: location — folder │ branch │ worktree (omitted when all are empty)
+line2=""
+[ -n "$dir" ]      && line2+="${sep}📂 ${blue}${dir##*/}${reset}"
+[ -n "$branch" ]   && line2+="${sep}🌿 ${teal}${branch}${reset}"
+[ -n "$worktree" ] && line2+="${sep}🌳 ${pink}${worktree}${reset}"
+line2=${line2#"$sep"}
+
+printf '%s\n' "$line1"
+if [ -n "$line2" ]; then printf '%s\n' "$line2"; fi
