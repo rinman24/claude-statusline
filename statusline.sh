@@ -39,7 +39,7 @@ rgb red f38ba8;   rgb overlay0 6c7086
 track=$'\033[48;2;49;50;68m'  # surface0 background for the bar's empty track
 
 # Context thresholds in absolute tokens, independent of window size.
-# The bar spans 0..CTX_BAR_MAX; at or past it the bar is full and ⚠️ appears.
+# The bar spans 0..CTX_BAR_MAX; at or past it the bar is full and 🚨 appears.
 CTX_WARN=95000 CTX_CRIT=120000 CTX_BAR_MAX=200000 BAR_CELLS=10
 
 if   [ "$tokens" -ge "$CTX_CRIT" ]; then ctx_color=$red
@@ -60,7 +60,7 @@ for (( i = 0; i < BAR_CELLS; i++ )); do
   fi
 done
 warn=""
-[ "$tokens" -ge "$CTX_BAR_MAX" ] && warn=" ⚠️"
+[ "$tokens" -ge "$CTX_BAR_MAX" ] && warn=" 🚨"
 printf -v cost_fmt '$%.2f' "$cost"
 
 sep=" ${overlay0}│${reset} "
