@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code status line — managed by chezmoi (rinman24/dotfiles).
+# Claude Code status line — https://github.com/rinman24/claude-statusline
 # Reads session JSON on stdin (https://code.claude.com/docs/en/statusline).
 # Two layouts, after AwesomeZun/CC-statusline's small and medium presets:
 #   small (2 lines)
@@ -24,8 +24,15 @@
 # and the leftover columns pad the numbers. Numbers have fixed widths, so bars
 # only resize when line 1 does.
 
-# Width measurement needs character, not byte, lengths.
-LC_ALL=en_US.UTF-8
+# Width measurement needs character, not byte, lengths. Minimal Linux images
+# often lack en_US.UTF-8, so take the first locale that counts ░ as one
+# character. A failed assignment keeps the previous locale, and some bash
+# builds warn about it on stderr.
+probe=░
+for loc in en_US.UTF-8 C.UTF-8 C.utf8; do
+  { LC_ALL=$loc; } 2>/dev/null
+  [ ${#probe} -eq 1 ] && break
+done
 
 input=$(cat)
 
