@@ -1,0 +1,44 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  host:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runs the script under /bin/bash 3.2, the oldest bash it supports.
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Syntax
+        run: /bin/bash -n statusline.sh && sh -n install.sh
+      - name: Render harness
+        run: python3 tests/statusline-harness.py
+      - name: Installer
+        run: sh tests/test-install.sh
+
+  container:
+    # Devcontainer-like images: no en_US.UTF-8, minimal tooling.
+    name: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: debian:stable-slim
+            setup: apt-get update -qq && apt-get install -y -qq --no-install-recommends jq git python3 >/dev/null
+          - image: alpine:latest
+            setup: apk add --no-cache -q bash jq git python3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Render harness and installer
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src ${{ matrix.image }} sh -c '
+            ${{ matrix.setup }} &&
+            python3 tests/statusline-harness.py &&
+            sh tests/test-install.sh'
